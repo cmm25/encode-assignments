@@ -14,10 +14,10 @@ messages = [
 messages.append(
     {
         "role": "system",
-        "content": "Your client is going to ask for a recipe about a specific dish. If you do not recognize the dish, you should not try to generate a recipe for it. Do not answer a recipe if you do not understand the name of the dish. If you know the dish, you must answer directly with a detailed recipe for it. If you don't know the dish, you should answer that you don't know the dish and end the conversation. in this case the client can : 1 share only ingredients and you should provide 3 dish names and not their recipes. 2. Client can provide a detailed dish name thus a full recipe will be needed. 3 Client can provide a recipe for your critique and suggested improvements.", 
+        "content": "Your client is going to ask for a recipe about a specific dish. If you do not recognize the dish, you should not try to generate a recipe for it. Do not answer a recipe if you do not understand the name of the dish. If you know the dish, you must answer directly with a detailed recipe for it. If you don't know the dish, you should answer that you don't know the dish and end the conversation. in this case the client can : 1 share only ingredients and you should provide 3 dish names and not their recipes. 2. Client can provide a detailed dish name thus a full recipe will be needed. 3 Client can provide a recipe for your critique and suggested improvements. if the client initial input doesn't match these scenarios, politely decline and prompt for a valid request", 
     }
 )
-
+# my input prompt
 dish = input("Hi, you may enter ingredients for a dish suggestion, request a dish recipe or maybe a critique for a recipe you want to share:\n")
 messages.append(
     {
