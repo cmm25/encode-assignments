@@ -7,52 +7,67 @@ import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
-type Topic = "work" | "people" | "animals" | "food" | "television"
+type Topic = "work" | "people" | "animals" | "food" | "television" | "general"
 type Tone = "witty" | "sarcastic" | "silly" | "dark" | "goofy"
-type JokeType = "pun" | "knockknock" | "story"
+type JokeType = "pun" | "knockknock" | "story" | "any"
 type Language = "en" | "zh" | "es" | "hi" | "ja" | "fr"
 
 export default function JokesGenerator(): React.ReactElement {
   const { messages, append, isLoading } = useChat()
-  const [topic, setTopic] = useState<Topic>("work")
+  const [topic, setTopic] = useState<Topic>("general")
   const [tone, setTone] = useState<Tone>("witty")
-  const [jokeType, setJokeType] = useState<JokeType>("pun")
-  const [temperature, setTemperature] = useState<number>(0.5)
+  const [jokeType, setJokeType] = useState<JokeType>("any")
+  const [temperature, setTemperature] = useState<number>(0.7)
   const [language, setLanguage] = useState<Language>("en")
   const [jokeGenerated, setJokeGenerated] = useState<boolean>(false)
   const [displayedJoke, setDisplayedJoke] = useState("")
+  const [jokeTypes, setJokeTypes] = useState<Set<string>>(new Set())
   const jokeContainerRef = useRef<HTMLDivElement>(null)
 
   const handleGenerateJoke = async (): Promise<void> => {
+    setJokeGenerated(false)
+    setDisplayedJoke("")
     const userMessage: Message = {
-      id: Date.now().toString(), 
+      id: Date.now().toString(),
       role: "user",
-      content: `Generate a ${tone} ${jokeType} about ${topic} in ${language}. The joke should be well-structured and of any style appropriate,offensive, funny, calm , bland for general audiences.`,
+      content: `Generate a ${tone} ${jokeType === "any" ? "joke" : jokeType} about ${topic} in ${language}. 
+        The joke can be offensive, funny, or appropriate, but avoid extremely offensive content. 
+        Be creative, surprising, and don't self-censor too much!`,
     }
 
     await append(userMessage, {
       options: {
-        temperature: temperature,
-      }
+        body: {
+          temperature,
+          topic,
+          tone,
+          jokeType,
+          language,
+        },
+      },
     })
     setJokeGenerated(true)
-    setDisplayedJoke("")
   }
 
   useEffect(() => {
     if (messages.length > 0 && jokeGenerated) {
-      const joke = messages[messages.length - 1].content
-      let index = 0
-      const intervalId = setInterval(() => {
-        if (index < joke.length) {
-          setDisplayedJoke((prev) => prev + joke[index])
-          index++
-        } else {
-          clearInterval(intervalId)
-        }
-      }, 50)
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage.role === 'assistant') {
+        const joke = lastMessage.content
+        let index = 0
+        const intervalId = setInterval(() => {
+          if (index < joke.length) {
+            setDisplayedJoke((prev) => prev + joke[index])
+            index++
+          } else {
+            clearInterval(intervalId)
+          }
+        }, 50)
+        const newJokeType = evaluateJoke(joke)
+        setJokeTypes(prevTypes => new Set(prevTypes).add(newJokeType))
 
-      return () => clearInterval(intervalId)
+        return () => clearInterval(intervalId)
+      }
     }
   }, [messages, jokeGenerated])
 
@@ -63,12 +78,34 @@ export default function JokesGenerator(): React.ReactElement {
   }, [displayedJoke])
 
   const evaluateJoke = (joke: string): string => {
-    if (joke.toLowerCase().includes("offensive")) {
-      return "Offensive"
-    } else if (joke.toLowerCase().includes("funny")) {
+    const lowerCaseJoke = joke.toLowerCase()
+    if (lowerCaseJoke.includes("offensive") ||
+      lowerCaseJoke.includes("inappropriate") ||
+      lowerCaseJoke.includes("nsfw") ||
+      lowerCaseJoke.includes("controversial") ||
+      lowerCaseJoke.includes("edgy")) {
+      return "Mildly Offensive"
+    } else if (lowerCaseJoke.includes("funny") ||
+      lowerCaseJoke.includes("hilarious") ||
+      lowerCaseJoke.includes("lol") ||
+      lowerCaseJoke.includes("haha") ||
+      lowerCaseJoke.includes("joke") ||
+      lowerCaseJoke.includes("humor")) {
       return "Funny"
-    } else {
+    } else if (lowerCaseJoke.includes("calm") ||
+      lowerCaseJoke.includes("bland") ||
+      lowerCaseJoke.includes("appropriate") ||
+      lowerCaseJoke.includes("safe")) {
       return "Appropriate"
+    } else {
+      // Analyze the content more deeply if no keywords are found
+      if (joke.includes("!") || joke.includes("?") || joke.match(/ha{2,}/i)) {
+        return "Funny"
+      } else if (joke.length < 50) {
+        return "Appropriate"
+      } else {
+        return "Neutral"
+      }
     }
   }
 
@@ -84,6 +121,7 @@ export default function JokesGenerator(): React.ReactElement {
               <SelectValue placeholder="Topic" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="general">General</SelectItem>
               <SelectItem value="work">Work</SelectItem>
               <SelectItem value="people">People</SelectItem>
               <SelectItem value="animals">Animals</SelectItem>
@@ -108,6 +146,7 @@ export default function JokesGenerator(): React.ReactElement {
               <SelectValue placeholder="Joke Type" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="any">Any</SelectItem>
               <SelectItem value="pun">Pun</SelectItem>
               <SelectItem value="knockknock">Knock-Knock</SelectItem>
               <SelectItem value="story">Story</SelectItem>
@@ -150,7 +189,9 @@ export default function JokesGenerator(): React.ReactElement {
           </CardContent>
         </Card>
         {jokeGenerated && displayedJoke && (
-          <div className="mt-4 text-sm font-medium text-muted-foreground">Joke Evaluation: {jokeEvaluation}</div>
+          <div className="mt-4 text-sm font-medium text-muted-foreground">
+            <div>Joke Evaluation: {jokeEvaluation}</div>
+          </div>
         )}
       </div>
     </div>
