@@ -162,5 +162,6 @@ The Jokes Generator is a dynamic and fun project leveraging the power of AI to g
 - **Multilingual Expansion**: More languages could be added for broader accessibility.
 - **Advanced Joke Evaluation**: Machine learning could be employed to better categorize and evaluate the humor level of jokes.
 - **User Authentication**: Allow users to save or share jokes they find particularly funny.
+- **Sound or voice generation**: Allow jokes to be processed through sound using voice models.
 
 This project offers a unique blend of creativity and technology, making it both an engaging app and a demonstration of GPT-4’s capability to entertain.
