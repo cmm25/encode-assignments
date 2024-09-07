@@ -1,8 +1,9 @@
-"use client";
-import React, { useState, useCallback, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
+"use client"
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useChat } from "ai/react";
+import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface Character {
   id: number;
@@ -15,6 +16,7 @@ interface Character {
 type Setting = 'country-side' | 'city' | 'forest' | 'beach' | 'mountains' | 'space' |'artic';
 type Tone = 'dark' | 'fantasy' | 'witty' | 'romantic' | 'scary' | 'comic'| 'mystery'| 'sci-fi';
 
+
 export default function Page() {
   const [tone, setTone] = useState<Tone>('witty');
   const [setting, setSetting] = useState<Setting>('country-side');
@@ -23,20 +25,96 @@ export default function Page() {
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
   const [storyPrompt, setStoryPrompt] = useState('');
   const [characterSummaries, setCharacterSummaries] = useState<Record<string, string>>({});
-
-  const { messages, handleSubmit, isLoading, error } = useChat({
+  const [fullStory, setFullStory] = useState("");
+  const [displayedStory, setDisplayedStory] = useState("");
+  const [isGeneratingStory, setIsGeneratingStory] = useState(false);
+  const storyContainerRef = useRef<HTMLDivElement>(null);
+  const { messages, append, isLoading, error } = useChat({
     api: '/api/chat',
-    onFinish: (message) => {
-      generateCharacterSummaries(message.content);
-    },
-    onError: (error) => {
-      console.error("Error in story generation:", error);
-    },
   });
 
   useEffect(() => {
-    console.log("Messages updated:", messages);
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === 'assistant') {
+        const { story, summaries } = parseStoryAndSummaries(lastMessage.content);
+        
+        if (story) {
+          setFullStory(story);
+          setIsGeneratingStory(true);
+        }
+        
+        if (Object.keys(summaries).length > 0) {
+          setCharacterSummaries(summaries);
+        }
+      }
+    }
   }, [messages]);
+
+  const parseStoryAndSummaries = (content: string) => {
+    const parts = content.split("CHARACTER SUMMARIES:");
+    const story = parts[0].trim();
+    const summariesText = parts[1] ? parts[1].trim() : "";
+    
+    const summaries: Record<string, string> = {};
+    if (summariesText) {
+      const summaryLines = summariesText.split('\n');
+      summaryLines.forEach(line => {
+        const [name, summary] = line.split(':');
+        if (name && summary) {
+          summaries[name.trim()] = summary.trim();
+        }
+      });
+    }
+    
+    return { story, summaries };
+  };
+
+  useEffect(() => {
+    if (isGeneratingStory && fullStory) {
+      let index = 0;
+      const intervalId = setInterval(() => {
+        if (index < fullStory.length) {
+          setDisplayedStory((prev) => prev + fullStory[index]);
+          index++;
+        } else {
+          clearInterval(intervalId);
+          setIsGeneratingStory(false);
+        }
+      }, 50);
+
+      return () => clearInterval(intervalId);
+    }
+  }, [fullStory, isGeneratingStory]);
+
+  useEffect(() => {
+    if (storyContainerRef.current) {
+      storyContainerRef.current.scrollTop = storyContainerRef.current.scrollHeight;
+    }
+  }, [displayedStory]);
+
+  const handleStorySubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setFullStory("");
+    setDisplayedStory("");
+    setCharacterSummaries({});
+    setIsGeneratingStory(false);
+    const characterPrompts = characters.map(c => `${c.name}: ${c.description}. Personality: ${c.personality}`).join('\n');
+    const fullPrompt = `Generate a ${tone} story set in the ${setting} with the following characters:\n${characterPrompts}\n\nStory prompt: ${storyPrompt}\n\nAfter the story, please provide a brief summary of each character's role in the story under the heading "CHARACTER SUMMARIES:". Each summary should be on a new line in the format "Character Name: Summary".`;
+    append({
+      role: 'user',
+      content: fullPrompt,
+    }, {
+      options: {
+        body: { 
+          tone,
+          setting,
+          characters,
+          language: 'en'
+        } 
+      }
+    });
+  }, [append, tone, setting, characters, storyPrompt]);
 
   const addCharacter = () => {
     if (newCharacter.name && newCharacter.description && newCharacter.personality) {
@@ -59,33 +137,6 @@ export default function Page() {
   const deleteCharacter = (id: number) => {
     setCharacters(characters.filter(c => c.id !== id));
   };
-
-  const generateCharacterSummaries = (generatedStory: string) => {
-    const summaries = characters.reduce((acc, character) => {
-      const mentionCount = (generatedStory.match(new RegExp(character.name, 'gi')) || []).length;
-      acc[character.name] = `${character.name} was mentioned ${mentionCount} times in the story. They played a ${mentionCount > 5 ? 'major' : 'minor'} role.`;
-      return acc;
-    }, {} as Record<string, string>);
-    setCharacterSummaries(summaries);
-  };
-
-  const handleStorySubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log("Form submitted");
-    const characterPrompts = characters.map(c => `${c.name}: ${c.description}. Personality: ${c.personality}`).join('\n');
-    const fullPrompt = `Generate a ${tone} story set in the ${setting} with the following characters:\n${characterPrompts}\n\nStory prompt: ${storyPrompt}`;
-    console.log("Submitting story generation request:", { tone, setting, characters, storyPrompt });
-    handleSubmit(e, { 
-      body: { 
-        prompt: fullPrompt,
-        tone,
-        setting,
-        characters,
-        language: 'en'
-      } 
-    });
-  }, [handleSubmit, tone, setting, characters, storyPrompt]);
-
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Storyteller AI</h1>
@@ -163,11 +214,11 @@ export default function Page() {
           </table>
         </div>
       </section>
-  {/* Story Parameters Section */}
-  <section className='mb-8'>
+      {/* Story Parameters Section */}
+      <section className='mb-8'>
         <h2 className="text-2xl font-bold mb-4">Set your story parameters</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Select onValueChange={(value: Setting) => setSetting(value)}>
+          <Select value={setting} onValueChange={(value: Setting) => setSetting(value)}>
             <SelectTrigger>
               <SelectValue placeholder="Select Story Setting" />
             </SelectTrigger>
@@ -181,7 +232,7 @@ export default function Page() {
               <SelectItem value="artic">Artic</SelectItem>
             </SelectContent>
           </Select>
-          <Select onValueChange={(value: Tone) => setTone(value)}>
+          <Select value={tone} onValueChange={(value: Tone) => setTone(value)}>
             <SelectTrigger>
               <SelectValue placeholder="Select Story Tone" />
             </SelectTrigger>
@@ -222,23 +273,24 @@ export default function Page() {
       </section>
 
       {/* Generated Story Section */}
-      {messages.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-2xl font-bold mb-4">Generated Story</h2>
-          <div className="bg-gray-100 p-4 rounded">
-            {messages.map((m, index) => (
-              <div key={index} className="mb-4">
-                <p>{m.content}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <section className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">Generated Story</h2>
+        <Card className="h-64">
+          <CardContent className="h-full p-0">
+            <div ref={storyContainerRef} className="h-full overflow-y-auto p-4 text-left whitespace-pre-wrap">
+              {displayedStory}
+              {isGeneratingStory && <span className="cursor-blink">|</span>}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
 
       {/* Character Summaries Section */}
-      {Object.keys(characterSummaries).length > 0 && (
-        <section>
-          <h2 className="text-2xl font-bold mb-4">Character Summaries</h2>
+      <section>
+        <h2 className="text-2xl font-bold mb-4">Character Summaries</h2>
+        {isGeneratingStory ? (
+          <p>Generating character summaries...</p>
+        ) : Object.keys(characterSummaries).length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(characterSummaries).map(([name, summary]) => (
               <div key={name} className="bg-gray-100 p-4 rounded">
@@ -247,9 +299,8 @@ export default function Page() {
               </div>
             ))}
           </div>
-        </section>
-      )}
-
+        ) : null}
+      </section>
       {/* Edit Character Modal */}
       {editingCharacter && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
