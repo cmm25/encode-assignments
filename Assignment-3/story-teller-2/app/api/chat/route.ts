@@ -49,7 +49,7 @@ export async function POST(req: Request) {
         stream: true,
         temperature: temperature,
         messages: apiMessages,
-        max_tokens: 1500,  
+        max_tokens: 1000,  
         presence_penalty: 0.6,
         frequency_penalty: 0.3,
     });
