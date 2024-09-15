@@ -1,10 +1,10 @@
 'use client'
-
 import { useState, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useTheme } from "next-themes"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Moon, Sun, Upload, Wand2, Plus, Pencil, Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -29,6 +29,9 @@ type Character = {
   description: string;
   personality: string;
 }
+type Setting = 'country-side' | 'city' | 'forest' | 'beach' | 'mountains' | 'space' |'artic';
+type Tone = 'dark' | 'fantasy' | 'witty' | 'romantic' | 'scary' | 'comic'| 'mystery'| 'sci-fi';
+
 
 export function RagStoryGenerator() {
   const [file, setFile] = useState<File | null>(null)
@@ -39,6 +42,8 @@ export function RagStoryGenerator() {
   const [story, setStory] = useState('')
   const [characterSummaries, setCharacterSummaries] = useState<Record<string, string>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [tone, setTone] = useState<Tone>('witty');
+  const [setting, setSetting] = useState<Setting>('country-side');
   const { theme, setTheme } = useTheme()
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,26 +105,26 @@ export function RagStoryGenerator() {
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-8 bg-gradient-to-br from-[#a0aecd] to-[#d0d8e8] dark:from-[#3a4358] dark:to-[#5b6882] transition-colors duration-200">
-      <Card className="max-w-4xl mx-auto bg-white/90 dark:bg-gray-700/90 backdrop-blur-sm">
-        <CardHeader className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 pb-6 border-b border-[#a0aecd] dark:border-[#a0aecd]/30">
-          <CardTitle className="text-2xl sm:text-3xl font-bold text-[#000000] dark:text-[#a0aecd]">RAG Story Generator</CardTitle>
+    <div className="min-h-screen bg-gradient-to-br from-[#a0aecd] to-[#d0d8e8] p-4 transition-colors duration-200 dark:from-[#3a4358] dark:to-[#5b6882] sm:p-8">
+      <Card className="mx-auto max-w-4xl bg-white/90 backdrop-blur-sm dark:bg-gray-700/90">
+        <CardHeader className="flex flex-col items-center justify-between space-y-2 border-b border-[#a0aecd] pb-6 dark:border-[#a0aecd]/30 sm:flex-row sm:space-y-0">
+          <CardTitle className="text-2xl font-bold text-[#000000] dark:text-[#a0aecd] sm:text-3xl">RAG Story Generator</CardTitle>
           <Button
             variant="outline"
             size="icon"
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-            className="bg-[#a0aecd]/20 dark:bg-[#2a3548]/80 text-[#000000] dark:text-[#e0e5f0] hover:bg-[#a0aecd]/30 dark:hover:bg-[#3a475e] border-[#a0aecd] dark:border-[#4a5a75]"
+            className="border-[#a0aecd] bg-[#a0aecd]/20 text-[#000000] hover:bg-[#a0aecd]/30 dark:border-[#4a5a75] dark:bg-[#2a3548]/80 dark:text-[#e0e5f0] dark:hover:bg-[#3a475e]"
           >
-            {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            {theme === 'light' ? <Moon className="size-5" /> : <Sun className="size-5" />}
             <span className="sr-only">Toggle theme</span>
           </Button>
         </CardHeader>
-        <CardContent className="space-y-8 mt-6">
+        <CardContent className="mt-6 space-y-8">
           <div className="space-y-4">
             <label className="block text-sm font-medium text-[#000000] dark:text-[#a0aecd]">
               Upload your book or text file
             </label>
-            <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
+            <div className="flex flex-col items-center space-y-2 sm:flex-row sm:space-x-4 sm:space-y-0">
               <Input
                 type="file"
                 accept=".txt"
@@ -130,12 +135,12 @@ export function RagStoryGenerator() {
               />
               <label
                 htmlFor="file-upload"
-                className="flex items-center justify-center px-4 py-2 border border-[#a0aecd] dark:border-[#a0aecd]/50 rounded-md shadow-sm text-sm font-medium text-[#000000] dark:text-[#a0aecd] bg-[#a0aecd]/20 dark:bg-[#a0aecd]/10 hover:bg-[#a0aecd]/30 dark:hover:bg-[#a0aecd]/20 cursor-pointer transition-colors duration-200"
+                className="flex cursor-pointer items-center justify-center rounded-md border border-[#a0aecd] bg-[#a0aecd]/20 px-4 py-2 text-sm font-medium text-[#000000] shadow-sm transition-colors duration-200 hover:bg-[#a0aecd]/30 dark:border-[#a0aecd]/50 dark:bg-[#a0aecd]/10 dark:text-[#a0aecd] dark:hover:bg-[#a0aecd]/20"
               >
-                <Upload className="mr-2 h-5 w-5" />
+                <Upload className="mr-2 size-5" />
                 Choose file
               </label>
-              <span className="text-sm text-[#000000] dark:text-[#a0aecd] truncate max-w-[200px] sm:max-w-none">
+              <span className="max-w-[200px] truncate text-sm text-[#000000] dark:text-[#a0aecd] sm:max-w-none">
                 {file ? file.name : 'No file chosen'}
               </span>
             </div>
@@ -144,10 +149,10 @@ export function RagStoryGenerator() {
           <Button 
             onClick={extractCharacters} 
             disabled={!file || isExtracting}
-            className="w-full bg-[#a0aecd] hover:bg-[#8a9ab9] text-[#000000] dark:bg-[#a0aecd]/80 dark:hover:bg-[#a0aecd] dark:text-[#000000] transition-colors duration-200"
+            className="w-full bg-[#a0aecd] text-[#000000] transition-colors duration-200 hover:bg-[#8a9ab9] dark:bg-[#a0aecd]/80 dark:text-[#000000] dark:hover:bg-[#a0aecd]"
           >
             {isExtracting ? 'Extracting...' : 'Extract Characters'}
-            <Wand2 className="ml-2 h-5 w-5" />
+            <Wand2 className="ml-2 size-5" />
           </Button>
           
           <div className="space-y-4">
@@ -173,17 +178,17 @@ export function RagStoryGenerator() {
                           variant="outline"
                           size="sm"
                           onClick={() => setEditingCharacter(char)}
-                          className="text-[#000000] dark:text-[#a0aecd] border-[#a0aecd] dark:border-[#a0aecd]/50"
+                          className="border-[#a0aecd] text-[#000000] dark:border-[#a0aecd]/50 dark:text-[#a0aecd]"
                         >
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="size-4" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => deleteCharacter(char.id)}
-                          className="text-[#000000] dark:text-[#a0aecd] border-[#a0aecd] dark:border-[#a0aecd]/50"
+                          className="border-[#a0aecd] text-[#000000] dark:border-[#a0aecd]/50 dark:text-[#a0aecd]"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="size-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -193,11 +198,11 @@ export function RagStoryGenerator() {
             </Table>
             <Dialog>
               <DialogTrigger asChild>
-                <Button className="bg-[#a0aecd] hover:bg-[#8a9ab9] text-[#000000] dark:bg-[#a0aecd]/80 dark:hover:bg-[#a0aecd] dark:text-[#000000]">
-                  <Plus className="mr-2 h-4 w-4" /> Add Character
+                <Button className="bg-[#a0aecd] text-[#000000] hover:bg-[#8a9ab9] dark:bg-[#a0aecd]/80 dark:text-[#000000] dark:hover:bg-[#a0aecd]">
+                  <Plus className="mr-2 size-4" /> Add Character
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-white dark:bg-gray-800 text-[#000000] dark:text-[#a0aecd]">
+              <DialogContent className="bg-white text-[#000000] dark:bg-gray-800 dark:text-[#a0aecd]">
                 <DialogHeader>
                   <DialogTitle>{editingCharacter ? 'Edit Character' : 'Add New Character'}</DialogTitle>
                 </DialogHeader>
@@ -221,21 +226,21 @@ export function RagStoryGenerator() {
                       name="name"
                       placeholder="Character Name"
                       defaultValue={editingCharacter?.name}
-                      className="bg-white dark:bg-gray-700 text-[#000000] dark:text-[#a0aecd]"
+                      className="bg-white text-[#000000] dark:bg-gray-700 dark:text-[#a0aecd]"
                     />
                     <Textarea
                       name="description"
                       placeholder="Character Description"
                       defaultValue={editingCharacter?.description}
-                      className="bg-white dark:bg-gray-700 text-[#000000] dark:text-[#a0aecd]"
+                      className="bg-white text-[#000000] dark:bg-gray-700 dark:text-[#a0aecd]"
                     />
                     <Textarea
                       name="personality"
                       placeholder="Character Personality"
                       defaultValue={editingCharacter?.personality}
-                      className="bg-white dark:bg-gray-700 text-[#000000] dark:text-[#a0aecd]"
+                      className="bg-white text-[#000000] dark:bg-gray-700 dark:text-[#a0aecd]"
                     />
-                    <Button type="submit" className="bg-[#a0aecd] hover:bg-[#8a9ab9] text-[#000000] dark:bg-[#a0aecd]/80 dark:hover:bg-[#a0aecd] dark:text-[#000000]">
+                    <Button type="submit" className="bg-[#a0aecd] text-[#000000] hover:bg-[#8a9ab9] dark:bg-[#a0aecd]/80 dark:text-[#000000] dark:hover:bg-[#a0aecd]">
                       {editingCharacter ? 'Update Character' : 'Add Character'}
                     </Button>
                   </div>
@@ -243,11 +248,44 @@ export function RagStoryGenerator() {
               </DialogContent>
             </Dialog>
           </div>
-          
+          <section className='mb-8'>
+        <h2 className="mb-4 text-2xl font-bold">Set your story parameters</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Select value={setting} onValueChange={(value: Setting) => setSetting(value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select Story Setting" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="country-side">Country-side</SelectItem>
+              <SelectItem value="city">City</SelectItem>
+              <SelectItem value="forest">Forest</SelectItem>
+              <SelectItem value="beach">Beach</SelectItem>
+              <SelectItem value="mountains">Mountains</SelectItem>
+              <SelectItem value="space">Space</SelectItem>
+              <SelectItem value="artic">Artic</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={tone} onValueChange={(value: Tone) => setTone(value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select Story Tone" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="dark">Dark</SelectItem>
+              <SelectItem value="fantasy">Fantasy</SelectItem>
+              <SelectItem value="witty">Witty</SelectItem>
+              <SelectItem value="romantic">Romantic</SelectItem>
+              <SelectItem value="scary">Scary</SelectItem>
+              <SelectItem value="comic">Comic</SelectItem>
+              <SelectItem value="mystery">Mystery</SelectItem>
+              <SelectItem value="sci-fi">Sci-fi</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </section>
           <Button 
             onClick={generateStory}
             disabled={characters.length === 0}
-            className="w-full bg-[#a0aecd] hover:bg-[#8a9ab9] text-[#000000] dark:bg-[#a0aecd]/80 dark:hover:bg-[#a0aecd] dark:text-[#000000] transition-colors duration-200"
+            className="w-full bg-[#a0aecd] text-[#000000] transition-colors duration-200 hover:bg-[#8a9ab9] dark:bg-[#a0aecd]/80 dark:text-[#000000] dark:hover:bg-[#a0aecd]"
           >
             Generate Story
           </Button>
@@ -258,7 +296,7 @@ export function RagStoryGenerator() {
               <Textarea
                 value={story}
                 readOnly
-                className="h-48 resize-none bg-[#a0aecd]/10 dark:bg-[#a0aecd]/5 text-[#000000] dark:text-[#a0aecd] border-[#a0aecd]/30 dark:border-[#a0aecd]/20 focus:ring-[#a0aecd] focus:border-[#a0aecd]"
+                className="h-48 resize-none border-[#a0aecd]/30 bg-[#a0aecd]/10 text-[#000000] focus:border-[#a0aecd] focus:ring-[#a0aecd] dark:border-[#a0aecd]/20 dark:bg-[#a0aecd]/5 dark:text-[#a0aecd]"
               />
             </div>
           )}
@@ -267,7 +305,7 @@ export function RagStoryGenerator() {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-[#000000] dark:text-[#a0aecd]">Character Summaries</h3>
               {Object.entries(characterSummaries).map(([name, summary]) => (
-                <div key={name} className="bg-[#a0aecd]/10 dark:bg-[#a0aecd]/5 p-4 rounded-md">
+                <div key={name} className="rounded-md bg-[#a0aecd]/10 p-4 dark:bg-[#a0aecd]/5">
                   <h4 className="font-medium text-[#000000] dark:text-[#a0aecd]">{name}</h4>
                   <p className="text-sm text-[#000000]/80 dark:text-[#a0aecd]/80">{summary}</p>
                 </div>
