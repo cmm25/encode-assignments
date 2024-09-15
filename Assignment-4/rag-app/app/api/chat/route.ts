@@ -1,8 +1,10 @@
 import OpenAI from "openai";
 import { OpenAIStream, StreamingTextResponse } from "ai";
+import { ChatCompletionMessageParam } from "openai/resources/chat";
 
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,});
+    apiKey: process.env.OPENAI_API_KEY,
+});
 
 
 export const runtime = "edge";
@@ -34,11 +36,10 @@ export async function POST(req: Request) {
     const userPrompt = `Generate a ${tone} story set in a ${setting} in ${language}. The story should be engaging and immersive.
     Include the following characters in your story:
     ${characterPrompts}
-    Be creative and don't hold back!.`;
+    Be creative and don't hold back!`;
 
-    const apiMessages = [
+    const apiMessages: ChatCompletionMessageParam[] = [
         { role: "system", content: systemMessage },
-        ...messages.slice(0, -1), // Include all previous messages except the last one
         { role: "user", content: userPrompt }
     ];
 
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
         stream: true,
         temperature: temperature,
         messages: apiMessages,
-        max_tokens: 1000,
+        max_tokens: 1000,  
         presence_penalty: 0.6,
         frequency_penalty: 0.3,
     });

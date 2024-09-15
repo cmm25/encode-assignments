@@ -104,7 +104,7 @@ export default function RAGStoryGenerator() {
     setIsExtracting(true)
 
     try {
-      const response = await fetch('/api/chat/splitandembed', {
+      const response = await fetch('/api/split', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
