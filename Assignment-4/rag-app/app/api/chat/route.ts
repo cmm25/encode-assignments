@@ -2,8 +2,8 @@ import OpenAI from "openai";
 import { OpenAIStream, StreamingTextResponse } from "ai";
 
 const openai = new OpenAI({
-    baseURL: `http://127.0.0.1:5000/v1`,
-});
+    apiKey: process.env.OPENAI_API_KEY,});
+
 
 export const runtime = "edge";
 
@@ -21,8 +21,7 @@ export async function POST(req: Request) {
     Your stories should be rich in detail, capturing the essence of the setting and characters, while being easy to understand in the specified language.
     Be creative, imaginative, and tailor the story to the chosen tone and setting.
     Don't self-censor too much - push the boundaries of storytelling while avoiding extremely offensive content.
-    Always strive to match the requested tone and setting, even if it means being a bit edgy or fantastical.
-    After generating the story, provide a brief summary of each character's role in the story.`;
+    Always strive to match the requested tone and setting, even if it means being a bit edgy or fantastical.`;
 
     interface Character {
         name: string;
@@ -35,8 +34,7 @@ export async function POST(req: Request) {
     const userPrompt = `Generate a ${tone} story set in a ${setting} in ${language}. The story should be engaging and immersive.
     Include the following characters in your story:
     ${characterPrompts}
-    Be creative and don't hold back!
-    After the story, provide a brief summary of each character's role under the heading "CHARACTER SUMMARIES:". Each summary should be on a new line in the format "Character Name: Summary".`;
+    Be creative and don't hold back!.`;
 
     const apiMessages = [
         { role: "system", content: systemMessage },
@@ -49,7 +47,7 @@ export async function POST(req: Request) {
         stream: true,
         temperature: temperature,
         messages: apiMessages,
-        max_tokens: 1000,  
+        max_tokens: 1000,
         presence_penalty: 0.6,
         frequency_penalty: 0.3,
     });
