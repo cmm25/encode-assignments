@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react'
 import { useTheme } from "next-themes"
+import ReactMarkdown from 'react-markdown'
 import { useChat } from "ai/react";
 import dynamic from 'next/dynamic'
 
@@ -37,7 +38,7 @@ type Character = {
   name: string;
   description: string;
   personality: string;
-}
+};
 
 type Setting = 'country-side' | 'city' | 'forest' | 'beach' | 'mountains' | 'space' | 'arctic';
 type Tone = 'dark' | 'fantasy' | 'witty' | 'romantic' | 'scary' | 'comic' | 'mystery' | 'sci-fi';
@@ -53,16 +54,14 @@ export default function RAGStoryGenerator() {
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState(() => "");
   const { theme, setTheme } = useTheme()
-  const [characters, setCharacters] = useState<Character[]>([])
+  const [characters, setCharacters] = useState<Character[]>([]);
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null)
   const [isExtracting, setIsExtracting] = useState(false)
+  const [nodesWithEmbedding, setNodesWithEmbedding] = useState([]);
   const [story, setStory] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [tone, setTone] = useState<Tone>('witty');
   const [setting, setSetting] = useState<Setting>('country-side');
-  const { messages, append, isLoading, error } = useChat({
-    api: '/api/chat',
-  });
 
 
   const [chunkSize, setChunkSize] = useState(DEFAULT_CHUNK_SIZE.toString());
@@ -71,6 +70,8 @@ export default function RAGStoryGenerator() {
   const [temperature, setTemperature] = useState(DEFAULT_TEMPERATURE.toString());
   const [topP, setTopP] = useState(DEFAULT_TOP_P.toString());
   const [needsNewIndex, setNeedsNewIndex] = useState(true);
+  const [answer, setAnswer] = useState("");
+  const [buildingIndex, setBuildingIndex] = useState(false);
 
   useEffect(() => {
     setMounted(true)
@@ -97,42 +98,68 @@ export default function RAGStoryGenerator() {
 
   const extractCharacters = async () => {
     if (!file) {
-      alert('Please upload a file first')
-      return
+      alert('Please upload a file first');
+      return;
     }
-
-    setIsExtracting(true)
-
+  
+    setIsExtracting(true);
+  
     try {
-      const response = await fetch('/api/split', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const result = await fetch("/api/split", {  
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           document: text,
           chunkSize: parseInt(chunkSize),
           chunkOverlap: parseInt(chunkOverlap),
-          topK: parseInt(topK),
-          temperature: parseFloat(temperature),
-          topP: parseFloat(topP),
         }),
-      })
+      });
+      const { error, payload } = await result.json();
 
-      const data = await response.json()
+      if (error) {
+        setAnswer(error);
+      }
+
+      if (payload) {
+        setNodesWithEmbedding(payload.nodesWithEmbedding);
+        setAnswer("Index built!");
+      }
+
+      setBuildingIndex(false); 
+  
+  
+      const data = await result.json();
+  
       if (data.error) {
-        alert(data.error)
+        throw new Error(data.error);
+      }
+  
+      if (data.payload && data.payload.characters) {
+        setCharacters(data.payload.characters.map((char: any, index: number) => ({
+          ...char,
+          id: index + 1
+        })));
+        setAnswer("Characters extracted successfully!");
       } else {
-        setCharacters(data.characters)
+        throw new Error("No characters found in the response");
       }
     } catch (error) {
-      console.error('Error extracting characters:', error)
-      alert('An error occurred while extracting characters')
+      if (error instanceof Error) {
+        console.error("Error extracting characters:", error);
+        setAnswer(`An error occurred while extracting characters: ${error.message}`);
+      } else {
+        console.error("Unknown error:", error);
+        setAnswer("An unknown error occurred.");
+      }
+    } finally {
+      setIsExtracting(false);
     }
-
-    setIsExtracting(false)
-  }
+  };
 
   const generateStory = async () => {
-    setStory('Generating story...')
+    setStory('Generating story...');
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -143,36 +170,41 @@ export default function RAGStoryGenerator() {
           characters,
           temperature: parseFloat(temperature),
         }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      let story = ''
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let storyContent = '';
 
       while (true) {
-        const { value, done } = await reader!.read()
-        if (done) break
-        story += decoder.decode(value)
-        setStory(story)
+        const { value, done } = await reader!.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        storyContent += chunk;
+
+        const formattedStory = `# ${tone.charAt(0).toUpperCase() + tone.slice(1)} Story in the ${setting.charAt(0).toUpperCase() + setting.slice(1)}\n\n${storyContent}`;
+        setStory(formattedStory);
       }
     } catch (error) {
-      console.error('Error generating story:', error)
-      setStory('An error occurred while generating the story')
+      console.error('Error generating story:', error);
+      setStory('An error occurred while generating the story');
     }
-  }
-  const addCharacter = (character: Omit<Character, 'id'>) => {
+  };
+
+  const addCharacter = (character: Character) => {
     setCharacters([...characters, { ...character, id: Date.now() }])
   }
 
   const updateCharacter = (updatedCharacter: Character) => {
-    setCharacters(characters.map(char =>
-      char.id === updatedCharacter.id ? updatedCharacter : char
-    ))
-    setEditingCharacter(null)
+    setCharacters(
+      characters.map((char) =>
+        char.id === updatedCharacter.id ? updatedCharacter : char
+      )
+    );
   }
 
   const deleteCharacter = (id: number) => {
@@ -283,8 +315,8 @@ export default function RAGStoryGenerator() {
           </div>
 
           <Button
+            disabled={!needsNewIndex || buildingIndex}
             onClick={extractCharacters}
-            disabled={!file || isExtracting}
             className="w-full bg-[#a0aecd] text-[#000000] transition-colors duration-200 hover:bg-[#8a9ab9] dark:bg-[#a0aecd]/80 dark:text-[#000000] dark:hover:bg-[#a0aecd]"
           >
             {isExtracting ? 'Extracting...' : 'Extract Characters'}
@@ -333,58 +365,58 @@ export default function RAGStoryGenerator() {
                 ))}
               </TableBody>
             </Table>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="bg-[#a0aecd] text-[#000000] hover:bg-[#8a9ab9] dark:bg-[#a0aecd]/80 dark:text-[#000000] dark:hover:bg-[#a0aecd]">
-                  <Plus className="mr-2 size-4" /> Add Character
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-white text-[#000000] dark:bg-gray-800 dark:text-[#a0aecd]">
-                <DialogHeader>
-                  <DialogTitle>{editingCharacter ? 'Edit Character' : 'Add New Character'}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={(e) => {
-                  e.preventDefault()
-                  const formData = new FormData(e.currentTarget)
-                  const character = {
-                    name: formData.get('name') as string,
-                    description: formData.get('description') as string,
-                    personality: formData.get('personality') as string,
-                  }
-                  if (editingCharacter) {
-                    updateCharacter({ ...character, id: editingCharacter.id })
-                  } else {
-                    addCharacter(character)
-                  }
-                  e.currentTarget.reset()
-                }}>
-                  <div className="space-y-4">
-                    <Input
-                      name="name"
-                      placeholder="Character Name"
-                      defaultValue={editingCharacter?.name}
-                      className="bg-white text-[#000000] dark:bg-gray-700 dark:text-[#a0aecd]"
-                    />
-                    <Textarea
-                      name="description"
-                      placeholder="Character Description"
-                      defaultValue={editingCharacter?.description}
-                      className="bg-white text-[#000000] dark:bg-gray-700 dark:text-[#a0aecd]"
-                    />
-                    <Textarea
-                      name="personality"
-                      placeholder="Character Personality"
-                      defaultValue={editingCharacter?.personality}
-                      className="bg-white text-[#000000] dark:bg-gray-700 dark:text-[#a0aecd]"
-                    />
-                    <Button type="submit" className="bg-[#a0aecd] text-[#000000] hover:bg-[#8a9ab9] dark:bg-[#a0aecd]/80 dark:text-[#000000] dark:hover:bg-[#a0aecd]">
-                      {editingCharacter ? 'Update Character' : 'Add Character'}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
           </div>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="bg-[#a0aecd] text-[#000000] hover:bg-[#8a9ab9] dark:bg-[#a0aecd]/80 dark:text-[#000000] dark:hover:bg-[#a0aecd]">
+                <Plus className="mr-2 size-4" /> Add Character
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-white text-[#000000] dark:bg-gray-800 dark:text-[#a0aecd]">
+              <DialogHeader>
+                <DialogTitle>{editingCharacter ? 'Edit Character' : 'Add New Character'}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={(e) => {
+                e.preventDefault()
+                const formData = new FormData(e.currentTarget)
+                const character = {
+                  name: formData.get('name') as string,
+                  description: formData.get('description') as string,
+                  personality: formData.get('personality') as string,
+                }
+                if (editingCharacter) {
+                  updateCharacter({ ...character, id: editingCharacter.id })
+                } else {
+                  addCharacter({ ...character, id: Date.now() })
+                }
+                e.currentTarget.reset()
+              }}>
+                <div className="space-y-4">
+                  <Input
+                    name="name"
+                    placeholder="Character Name"
+                    defaultValue={editingCharacter?.name}
+                    className="bg-white text-[#000000] dark:bg-gray-700 dark:text-[#a0aecd]"
+                  />
+                  <Textarea
+                    name="description"
+                    placeholder="Character Description"
+                    defaultValue={editingCharacter?.description}
+                    className="bg-white text-[#000000] dark:bg-gray-700 dark:text-[#a0aecd]"
+                  />
+                  <Textarea
+                    name="personality"
+                    placeholder="Character Personality"
+                    defaultValue={editingCharacter?.personality}
+                    className="bg-white text-[#000000] dark:bg-gray-700 dark:text-[#a0aecd]"
+                  />
+                  <Button type="submit" className="bg-[#a0aecd] text-[#000000] hover:bg-[#8a9ab9] dark:bg-[#a0aecd]/80 dark:text-[#000000] dark:hover:bg-[#a0aecd]">
+                    {editingCharacter ? 'Update Character' : 'Add Character'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
           {/* Story settings section */}
           <section className='mb-8'>
             <h2 className="mb-4 text-2xl font-bold">Set your story parameters</h2>
@@ -431,14 +463,16 @@ export default function RAGStoryGenerator() {
 
           {/* Generated story section */}
           {story && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-[#000000] dark:text-[#a0aecd]">Generated Story</h3>
-              <Textarea
-                value={story}
-                readOnly
-                className="h-48 resize-none border-[#a0aecd]/30 bg-[#a0aecd]/10 text-[#000000] focus:border-[#a0aecd] focus:ring-[#a0aecd] dark:border-[#a0aecd]/20 dark:bg-[#a0aecd]/5 dark:text-[#a0aecd]"
-              />
-            </div>
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-[#000000] dark:text-[#a0aecd]">Generated Story</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <ReactMarkdown>{story}</ReactMarkdown>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </CardContent>
       </Card>
