@@ -82,10 +82,10 @@ export default function RAGStoryGenerator() {
       alert('Please upload a file first');
       return;
     }
-  
+
     setIsExtracting(true);
     setBuildingIndex(true);
-  
+
     try {
       const response = await fetch('/api/split', {
         method: 'POST',
@@ -105,10 +105,18 @@ export default function RAGStoryGenerator() {
 
       const extractedCharacters = await response.json();
       console.log('Extracted characters:', extractedCharacters);
-      setCharacters(extractedCharacters.map((char: Character, index: number) => ({
-        ...char,
-        id: index + 1
-      })));
+
+      // Process the extracted characters
+      const formattedCharacters = extractedCharacters.flatMap((charArray: Character[], index: number) =>
+        charArray.map((char: Character) => ({
+          id: index + 1,
+          name: char.name || `Character ${index + 1}`,
+          description: char.description || 'No description available',
+          personality: char.personality || 'No personality traits specified',
+        }))
+      );
+
+      setCharacters(formattedCharacters);
       setNeedsNewIndex(false);
     } catch (error) {
       console.error("Error extracting characters:", error);
@@ -119,6 +127,37 @@ export default function RAGStoryGenerator() {
     }
   }, [text, chunkSize, chunkOverlap]);
 
+  const formatStory = (rawStory: string) => {
+    // Remove extra spaces and line breaks
+    let formattedStory = rawStory.replace(/\s+/g, ' ').trim();
+    
+    // Fix word breaks
+    formattedStory = formattedStory.replace(/(\w+)\s+(\w+)/g, (_, p1, p2) => {
+      if (p1.length <= 2 || p2.length <= 2) {
+        return p1 + p2;
+      }
+      return p1 + ' ' + p2;
+    });
+
+    // Format titles and subtitles
+    formattedStory = formattedStory.replace(/([#]+)\s*([^#\n]+)/g, (_, hashes, title) => {
+      return `\n\n${hashes} ${title.trim()}\n\n`;
+    });
+
+    // Ensure proper capitalization after periods
+    formattedStory = formattedStory.replace(/\.\s+[a-z]/g, match => match.toUpperCase());
+
+    // Add paragraph breaks
+    formattedStory = formattedStory.replace(/\.\s+/g, '.\n\n');
+
+    // Remove any remaining '\n' characters
+    formattedStory = formattedStory.replace(/\\n/g, '');
+
+    // Trim extra whitespace
+    formattedStory = formattedStory.split('\n').map(line => line.trim()).join('\n');
+
+    return formattedStory;
+  };
 
   const generateStory = useCallback(async () => {
     setStory('Generating story...');
@@ -149,13 +188,15 @@ export default function RAGStoryGenerator() {
         if (done) break;
         const chunk = decoder.decode(value);
         storyContent += chunk;
-        setStory(prevStory => `# ${tone.charAt(0).toUpperCase() + tone.slice(1)} Story in the ${setting.charAt(0).toUpperCase() + setting.slice(1)}\n\n${storyContent}`);
+        const formattedStory = formatStory(storyContent);
+        setStory(formattedStory);
       }
     } catch (error) {
       console.error('Error generating story:', error);
       setStory('An error occurred while generating the story');
     }
   }, [tone, setting, characters, temperature, topK, topP]);
+
 
   const addCharacter = useCallback((character: Character) => {
     setCharacters(prevCharacters => [...prevCharacters, { ...character, id: Date.now() }])
@@ -315,33 +356,33 @@ export default function RAGStoryGenerator() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-              {characters.map((char) => (
-                <TableRow key={char.id}>
-                  <TableCell className="text-[#000000] dark:text-[#a0aecd]">{char.name}</TableCell>
-                  <TableCell className="text-[#000000] dark:text-[#a0aecd]">{char.description}</TableCell>
-                  <TableCell className="text-[#000000] dark:text-[#a0aecd]">{char.personality}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditingCharacter(char)}
-                        className="border-[#a0aecd] text-[#000000] dark:border-[#a0aecd]/50 dark:text-[#a0aecd]"
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deleteCharacter(char.id)}
-                        className="border-[#a0aecd] text-[#000000] dark:border-[#a0aecd]/50 dark:text-[#a0aecd]"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                {characters.map((char) => (
+                  <TableRow key={char.id}>
+                    <TableCell className="text-[#000000] dark:text-[#a0aecd]">{char.name}</TableCell>
+                    <TableCell className="text-[#000000] dark:text-[#a0aecd]">{char.description}</TableCell>
+                    <TableCell className="text-[#000000] dark:text-[#a0aecd]">{char.personality}</TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingCharacter(char)}
+                          className="border-[#a0aecd] text-[#000000] dark:border-[#a0aecd]/50 dark:text-[#a0aecd]"
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deleteCharacter(char.id)}
+                          className="border-[#a0aecd] text-[#000000] dark:border-[#a0aecd]/50 dark:text-[#a0aecd]"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>

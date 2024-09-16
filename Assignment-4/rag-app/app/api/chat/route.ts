@@ -26,10 +26,10 @@ export async function POST(req: Request) {
     Format your story as follows:
     1. Start with a title in the format: "# [Your Story Title]"
     2. Follow with story content, using Markdown formatting for structure:
-       - Use "## " for section headers if applicable
-       - Use paragraph breaks for readability
-       - Use "*" for emphasis where appropriate
-       - Use dialogue formatting: "Character name: 'Dialogue'"`;
+        - Use "## " for section headers if applicable
+        - Use paragraph breaks for readability
+        - Use "*" for emphasis where appropriate
+        - Use dialogue formatting: "Character name: 'Dialogue'"`;
 
     interface Character {
         name: string;
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
             stream: true,
             temperature: temperature,
             messages: apiMessages,
-            max_tokens: 100,
+            max_tokens: 1000,
             presence_penalty: 0.6,
             frequency_penalty: 0.3,
         });
