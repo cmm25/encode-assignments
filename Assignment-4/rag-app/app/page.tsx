@@ -1,9 +1,9 @@
-'use client';
-import { useState, useRef, useEffect } from 'react'
+"use client";
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useTheme } from "next-themes"
 import ReactMarkdown from 'react-markdown'
-import { useChat } from "ai/react";
 import dynamic from 'next/dynamic'
+
 
 const Select = dynamic(() => import('@/components/ui/select').then(mod => mod.Select), { ssr: false })
 const Button = dynamic(() => import("@/components/ui/button").then(mod => mod.Button), { ssr: false })
@@ -43,72 +43,54 @@ type Character = {
 type Setting = 'country-side' | 'city' | 'forest' | 'beach' | 'mountains' | 'space' | 'arctic';
 type Tone = 'dark' | 'fantasy' | 'witty' | 'romantic' | 'scary' | 'comic' | 'mystery' | 'sci-fi';
 
-const DEFAULT_CHUNK_SIZE = 1024;
-const DEFAULT_CHUNK_OVERLAP = 20;
-const DEFAULT_TOP_K = 2;
+const DEFAULT_CHUNK_SIZE = 1000;
+const DEFAULT_CHUNK_OVERLAP = 200;
 const DEFAULT_TEMPERATURE = 0.1;
-const DEFAULT_TOP_P = 1;
 
 export default function RAGStoryGenerator() {
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [text, setText] = useState(() => "");
-  const { theme, setTheme } = useTheme()
+  const [text, setText] = useState("");
+  const { theme, setTheme } = useTheme();
   const [characters, setCharacters] = useState<Character[]>([]);
-  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null)
-  const [isExtracting, setIsExtracting] = useState(false)
-  const [nodesWithEmbedding, setNodesWithEmbedding] = useState([]);
-  const [story, setStory] = useState('')
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [story, setStory] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [tone, setTone] = useState<Tone>('witty');
   const [setting, setSetting] = useState<Setting>('country-side');
 
-
   const [chunkSize, setChunkSize] = useState(DEFAULT_CHUNK_SIZE.toString());
   const [chunkOverlap, setChunkOverlap] = useState(DEFAULT_CHUNK_OVERLAP.toString());
-  const [topK, setTopK] = useState(DEFAULT_TOP_K.toString());
   const [temperature, setTemperature] = useState(DEFAULT_TEMPERATURE.toString());
-  const [topP, setTopP] = useState(DEFAULT_TOP_P.toString());
   const [needsNewIndex, setNeedsNewIndex] = useState(true);
-  const [answer, setAnswer] = useState("");
   const [buildingIndex, setBuildingIndex] = useState(false);
+  const [topK, setTopK] = useState<string>('5');
+  const [topP, setTopP] = useState<string>('0.95');
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
-  if (!mounted) {
-    return null
-  }
+  const handleChunkOverlapChange = useCallback((value: string) => {
+    setChunkOverlap(value);
+    setNeedsNewIndex(true);
+  }, []);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0]
-    if (selectedFile && selectedFile.type === 'text/plain') {
-      setFile(selectedFile)
-      const reader = new FileReader()
-      reader.onload = (e) => setText(e.target?.result as string)
-      reader.readAsText(selectedFile)
-    } else {
-      alert('Please upload a .txt file')
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
-    }
-  }
-
-  const extractCharacters = async () => {
-    if (!file) {
+  const extractCharactersFromText = useCallback(async () => {
+    if (!text) {
       alert('Please upload a file first');
       return;
     }
   
     setIsExtracting(true);
+    setBuildingIndex(true);
   
     try {
-      const result = await fetch("/api/split", {  
-        method: "POST",
+      const response = await fetch('/api/split', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           document: text,
@@ -116,49 +98,29 @@ export default function RAGStoryGenerator() {
           chunkOverlap: parseInt(chunkOverlap),
         }),
       });
-      const { error, payload } = await result.json();
 
-      if (error) {
-        setAnswer(error);
-      }
-
-      if (payload) {
-        setNodesWithEmbedding(payload.nodesWithEmbedding);
-        setAnswer("Index built!");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      setBuildingIndex(false); 
-  
-  
-      const data = await result.json();
-  
-      if (data.error) {
-        throw new Error(data.error);
-      }
-  
-      if (data.payload && data.payload.characters) {
-        setCharacters(data.payload.characters.map((char: any, index: number) => ({
-          ...char,
-          id: index + 1
-        })));
-        setAnswer("Characters extracted successfully!");
-      } else {
-        throw new Error("No characters found in the response");
-      }
+      const extractedCharacters = await response.json();
+      console.log('Extracted characters:', extractedCharacters);
+      setCharacters(extractedCharacters.map((char: Character, index: number) => ({
+        ...char,
+        id: index + 1
+      })));
+      setNeedsNewIndex(false);
     } catch (error) {
-      if (error instanceof Error) {
-        console.error("Error extracting characters:", error);
-        setAnswer(`An error occurred while extracting characters: ${error.message}`);
-      } else {
-        console.error("Unknown error:", error);
-        setAnswer("An unknown error occurred.");
-      }
+      console.error("Error extracting characters:", error);
+      alert('An error occurred while extracting characters');
     } finally {
       setIsExtracting(false);
+      setBuildingIndex(false);
     }
-  };
+  }, [text, chunkSize, chunkOverlap]);
 
-  const generateStory = async () => {
+
+  const generateStory = useCallback(async () => {
     setStory('Generating story...');
     try {
       const response = await fetch('/api/chat', {
@@ -169,6 +131,8 @@ export default function RAGStoryGenerator() {
           setting,
           characters,
           temperature: parseFloat(temperature),
+          topK: parseInt(topK),
+          topP: parseFloat(topP),
         }),
       });
 
@@ -185,31 +149,55 @@ export default function RAGStoryGenerator() {
         if (done) break;
         const chunk = decoder.decode(value);
         storyContent += chunk;
-
-        const formattedStory = `# ${tone.charAt(0).toUpperCase() + tone.slice(1)} Story in the ${setting.charAt(0).toUpperCase() + setting.slice(1)}\n\n${storyContent}`;
-        setStory(formattedStory);
+        setStory(prevStory => `# ${tone.charAt(0).toUpperCase() + tone.slice(1)} Story in the ${setting.charAt(0).toUpperCase() + setting.slice(1)}\n\n${storyContent}`);
       }
     } catch (error) {
       console.error('Error generating story:', error);
       setStory('An error occurred while generating the story');
     }
-  };
+  }, [tone, setting, characters, temperature, topK, topP]);
 
-  const addCharacter = (character: Character) => {
-    setCharacters([...characters, { ...character, id: Date.now() }])
-  }
+  const addCharacter = useCallback((character: Character) => {
+    setCharacters(prevCharacters => [...prevCharacters, { ...character, id: Date.now() }])
+  }, []);
 
-  const updateCharacter = (updatedCharacter: Character) => {
-    setCharacters(
-      characters.map((char) =>
+  const updateCharacter = useCallback((updatedCharacter: Character) => {
+    setCharacters(prevCharacters =>
+      prevCharacters.map((char) =>
         char.id === updatedCharacter.id ? updatedCharacter : char
       )
     );
+  }, []);
+
+  const deleteCharacter = useCallback((id: number) => {
+    setCharacters(prevCharacters => prevCharacters.filter(char => char.id !== id))
+  }, []);
+
+  const handleChunkSizeChange = useCallback((value: string) => {
+    setChunkSize(value);
+    setNeedsNewIndex(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
   }
 
-  const deleteCharacter = (id: number) => {
-    setCharacters(characters.filter(char => char.id !== id))
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0]
+    if (selectedFile && selectedFile.type === 'text/plain') {
+      setFile(selectedFile)
+      const reader = new FileReader()
+      reader.onload = (e) => setText(e.target?.result as string)
+      reader.readAsText(selectedFile)
+    } else {
+      alert('Please upload a .txt file')
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
   }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#a0aecd] to-[#d0d8e8] p-4 transition-colors duration-200 dark:from-[#3a4358] dark:to-[#5b6882] sm:p-8">
@@ -227,6 +215,7 @@ export default function RAGStoryGenerator() {
           </Button>
         </CardHeader>
         <CardContent className="mt-6 space-y-8">
+          {/* File upload section */}
           <div className="space-y-4">
             <label className="block text-sm font-medium text-[#000000] dark:text-[#a0aecd]">
               Upload your book or text file
@@ -252,7 +241,8 @@ export default function RAGStoryGenerator() {
               </span>
             </div>
           </div>
-          {/* New RAG parameter controls */}
+
+          {/* RAG parameter controls */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-[#000000] dark:text-[#a0aecd]">RAG Parameters</h3>
             <LinkedSlider
@@ -262,10 +252,7 @@ export default function RAGStoryGenerator() {
               max={3000}
               step={1}
               value={chunkSize}
-              onChange={(value: string) => {
-                setChunkSize(value);
-                setNeedsNewIndex(true);
-              }}
+              onChange={handleChunkSizeChange}
             />
             <LinkedSlider
               label="Chunk Overlap:"
@@ -274,10 +261,7 @@ export default function RAGStoryGenerator() {
               max={600}
               step={1}
               value={chunkOverlap}
-              onChange={(value: string) => {
-                setChunkOverlap(value);
-                setNeedsNewIndex(true);
-              }}
+              onChange={handleChunkOverlapChange}
             />
             <LinkedSlider
               label="Top K:"
@@ -286,9 +270,7 @@ export default function RAGStoryGenerator() {
               max={15}
               step={1}
               value={topK}
-              onChange={(value: string) => {
-                setTopK(value);
-              }}
+              onChange={setTopK}
             />
             <LinkedSlider
               label="Temperature:"
@@ -297,9 +279,7 @@ export default function RAGStoryGenerator() {
               max={1}
               step={0.01}
               value={temperature}
-              onChange={(value: string) => {
-                setTemperature(value);
-              }}
+              onChange={setTemperature}
             />
             <LinkedSlider
               label="Top P:"
@@ -308,15 +288,14 @@ export default function RAGStoryGenerator() {
               max={1}
               step={0.01}
               value={topP}
-              onChange={(value: string) => {
-                setTopP(value);
-              }}
+              onChange={setTopP}
             />
           </div>
 
+
           <Button
             disabled={!needsNewIndex || buildingIndex}
-            onClick={extractCharacters}
+            onClick={extractCharactersFromText}
             className="w-full bg-[#a0aecd] text-[#000000] transition-colors duration-200 hover:bg-[#8a9ab9] dark:bg-[#a0aecd]/80 dark:text-[#000000] dark:hover:bg-[#a0aecd]"
           >
             {isExtracting ? 'Extracting...' : 'Extract Characters'}
@@ -336,33 +315,33 @@ export default function RAGStoryGenerator() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {characters.map((char) => (
-                  <TableRow key={char.id}>
-                    <TableCell className="text-[#000000] dark:text-[#a0aecd]">{char.name}</TableCell>
-                    <TableCell className="text-[#000000] dark:text-[#a0aecd]">{char.description}</TableCell>
-                    <TableCell className="text-[#000000] dark:text-[#a0aecd]">{char.personality}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingCharacter(char)}
-                          className="border-[#a0aecd] text-[#000000] dark:border-[#a0aecd]/50 dark:text-[#a0aecd]"
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => deleteCharacter(char.id)}
-                          className="border-[#a0aecd] text-[#000000] dark:border-[#a0aecd]/50 dark:text-[#a0aecd]"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+              {characters.map((char) => (
+                <TableRow key={char.id}>
+                  <TableCell className="text-[#000000] dark:text-[#a0aecd]">{char.name}</TableCell>
+                  <TableCell className="text-[#000000] dark:text-[#a0aecd]">{char.description}</TableCell>
+                  <TableCell className="text-[#000000] dark:text-[#a0aecd]">{char.personality}</TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingCharacter(char)}
+                        className="border-[#a0aecd] text-[#000000] dark:border-[#a0aecd]/50 dark:text-[#a0aecd]"
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => deleteCharacter(char.id)}
+                        className="border-[#a0aecd] text-[#000000] dark:border-[#a0aecd]/50 dark:text-[#a0aecd]"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
               </TableBody>
             </Table>
           </div>
