@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Upload, Sun, Moon, Loader2, AlertTriangle, CheckCircle, Info } from 'lucide-react'
@@ -45,11 +46,11 @@ export default function AnimalAnalyzer() {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-center p-8 transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
+    <div className={`min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
       <Card className={`w-full max-w-4xl ${isDarkMode ? 'bg-gray-800 shadow-xl text-gray-100' : 'bg-white shadow text-gray-900'}`}>
-        <CardContent className="p-12">
-          <div className="flex justify-between items-center mb-16">
-            <h1 className="text-4xl font-bold tracking-tight">Animal Analyzer</h1>
+        <CardContent className="p-6 sm:p-12">
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-8 sm:mb-16">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4 sm:mb-0">Animal Analyzer</h1>
             <div className="flex items-center space-x-2">
               <Sun className={`h-5 w-5 ${isDarkMode ? 'text-gray-300' : 'text-yellow-500'}`} />
               <Switch
@@ -61,10 +62,10 @@ export default function AnimalAnalyzer() {
             </div>
           </div>
           
-          <div className="space-y-16">
-            <div className="space-y-8">
-              <h2 className="text-2xl font-semibold">Upload an image of an animal</h2>
-              <div className={`border-2 border-dashed rounded-lg p-12 text-center ${isDarkMode ? 'border-gray-600 hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'} transition-colors duration-300`}>
+          <div className="space-y-8 sm:space-y-16">
+            <div className="space-y-6 sm:space-y-8">
+              <h2 className="text-xl sm:text-2xl font-semibold">Upload an image of an animal</h2>
+              <div className={`border-2 border-dashed rounded-lg p-6 sm:p-12 text-center ${isDarkMode ? 'border-gray-600 hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'} transition-colors duration-300`}>
                 <input
                   type="file"
                   accept="image/*"
@@ -74,13 +75,13 @@ export default function AnimalAnalyzer() {
                 />
                 <label
                   htmlFor="image-upload"
-                  className={`cursor-pointer inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md transition-colors duration-300 ${
+                  className={`cursor-pointer inline-flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 border border-transparent text-sm sm:text-base font-medium rounded-md transition-colors duration-300 ${
                     isDarkMode
                       ? 'bg-gray-700 text-gray-100 hover:bg-gray-600'
                       : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
                   }`}
                 >
-                  <Upload className="mr-2 h-5 w-5" />
+                  <Upload className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Choose an image
                 </label>
                 {image && (
@@ -92,13 +93,13 @@ export default function AnimalAnalyzer() {
                   onClick={handleSubmit}
                   disabled={!image || isProcessing}
                   size="lg"
-                  className={`px-8 py-3 text-lg ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''} ${
-                    isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
+                  className={`px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''} ${
+                    isDarkMode ? 'bg-[#c19c70] hover:bg-blue-700' : 'bg-[#c19c70] hover:bg-blue-600'
                   } text-white transition-colors duration-300`}
                 >
                   {isProcessing ? (
                     <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                       Processing...
                     </>
                   ) : (
@@ -108,7 +109,7 @@ export default function AnimalAnalyzer() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-16">
               {image && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -116,8 +117,8 @@ export default function AnimalAnalyzer() {
                   transition={{ duration: 0.5 }}
                   className="flex flex-col space-y-4"
                 >
-                  <h2 className="text-2xl font-semibold">Uploaded Image</h2>
-                  <img src={image} alt="Uploaded animal" className="w-full h-64 object-cover rounded-lg shadow-lg" />
+                  <h2 className="text-xl sm:text-2xl font-semibold">Uploaded Image</h2>
+                  <img src={image} alt="Uploaded animal" className="w-full h-48 sm:h-64 object-cover rounded-lg shadow-lg" />
                 </motion.div>
               )}
               {result && (
@@ -127,32 +128,32 @@ export default function AnimalAnalyzer() {
                   transition={{ duration: 0.5 }}
                   className={`rounded-lg shadow-lg overflow-hidden ${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-200 text-gray-900'}`}
                 >
-                  <div className={`p-6 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}>
-                    <h2 className="text-2xl font-semibold">Analysis Result</h2>
+                  <div className={`p-4 sm:p-6 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}>
+                    <h2 className="text-xl sm:text-2xl font-semibold">Analysis Result</h2>
                   </div>
-                  <div className="p-6 space-y-6">
+                  <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                     <div className="flex items-center space-x-4">
-                      <div className={`p-3 rounded-full ${isDarkMode ? 'bg-blue-900' : 'bg-blue-100'}`}>
-                        <Info className={`h-6 w-6 ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`} />
+                      <div className={`p-2 sm:p-3 rounded-full ${isDarkMode ? 'bg-blue-900' : 'bg-blue-100'}`}>
+                        <Info className={`h-5 w-5 sm:h-6 sm:w-6 ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`} />
                       </div>
                       <div>
-                        <h3 className="text-xl font-medium">Animal</h3>
-                        <p className="text-lg font-semibold">{result.name}</p>
+                        <h3 className="text-lg sm:text-xl font-medium">Animal</h3>
+                        <p className="text-base sm:text-lg font-semibold">{result.name}</p>
                       </div>
                     </div>
-                    <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}>
-                      <h3 className="text-xl font-medium mb-2">Description</h3>
-                      <p>{result.description}</p>
+                    <div className={`p-3 sm:p-4 rounded-lg ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}>
+                      <h3 className="text-lg sm:text-xl font-medium mb-2">Description</h3>
+                      <p className="text-sm sm:text-base">{result.description}</p>
                     </div>
                     <div className="flex items-center space-x-4">
                       {result.isDangerous ? (
-                        <AlertTriangle className="h-8 w-8 text-red-500" />
+                        <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-red-500" />
                       ) : (
-                        <CheckCircle className="h-8 w-8 text-green-500" />
+                        <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />
                       )}
                       <div>
-                        <h3 className="text-xl font-medium">Safety Assessment</h3>
-                        <p className={`text-lg font-semibold ${result.isDangerous ? 'text-red-400' : 'text-green-400'}`}>
+                        <h3 className="text-lg sm:text-xl font-medium">Safety Assessment</h3>
+                        <p className={`text-base sm:text-lg font-semibold ${result.isDangerous ? 'text-red-400' : 'text-green-400'}`}>
                           This animal is {result.isDangerous ? 'dangerous' : 'not dangerous'}.
                         </p>
                       </div>
