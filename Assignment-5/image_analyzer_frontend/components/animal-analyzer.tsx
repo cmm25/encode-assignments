@@ -1,49 +1,71 @@
 "use client";
 
-import React, { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Upload, Sun, Moon, Loader2, AlertTriangle, CheckCircle, Info } from 'lucide-react'
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
+import React, { useState } from 'react';
+import Image from 'next/image';
+import { motion } from 'framer-motion';
+import { Upload, Sun, Moon, Loader2, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 
-const processImage = async (image: File): Promise<{ name: string, description: string, isDangerous: boolean }> => {
-  await new Promise(resolve => setTimeout(resolve, 2000))
-  const animals = [
-    { name: "Lion", description: "The lion is a large cat of the genus Panthera native to Africa and India.", isDangerous: true },
-    { name: "Rabbit", description: "Rabbits are small mammals in the family Leporidae of the order Lagomorpha.", isDangerous: false },
-    { name: "Elephant", description: "Elephants are the largest existing land animals. Three living species are currently recognised.", isDangerous: true },
-  ]
-  return animals[Math.floor(Math.random() * animals.length)]
+interface Result {
+  animal: string;
+  confidence: number;
+  description: string;
+  wikipediaUrl: string;
+  isDangerous: boolean;
 }
 
 export default function AnimalAnalyzer() {
-  const [image, setImage] = useState<string | null>(null)
-  const [result, setResult] = useState<{ name: string, description: string, isDangerous: boolean } | null>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(true)
+  const [inputImage, setInputImage] = useState<string | null>(null);
+  const [result, setResult] = useState<Result | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => setImage(e.target?.result as string)
-      reader.readAsDataURL(file)
+    const file = event.target.files?.[0];
+    if (file && (file.type === "image/jpeg" || file.type === "image/png")) {
+      const imageUrl = URL.createObjectURL(file);
+      setInputImage(imageUrl);
+    } else {
+      alert("Please select a valid image file (jpg, jpeg, or png)");
     }
-  }
+  };
 
-  const handleSubmit = async () => {
-    if (!image) return
-    setIsProcessing(true)
-    try {
-      const file = await fetch(image).then(r => r.blob()).then(blobFile => new File([blobFile], "image.jpg", { type: "image/jpeg" }))
-      const result = await processImage(file)
-      setResult(result)
-    } catch (error) {
-      console.error("Error processing image:", error)
+  const handleRecognize = async () => {
+    if (!inputImage) {
+      console.error('No image selected');
+      return;
     }
-    setIsProcessing(false)
-  }
+
+    setIsProcessing(true);
+    setResult(null);
+
+    try {
+      const formData = new FormData();
+      const response = await fetch(inputImage);
+      const blob = await response.blob();
+      formData.append('image', blob, 'image.jpg');
+
+      const recognitionResponse = await fetch('http://localhost:8000/classify', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!recognitionResponse.ok) {
+        throw new Error('Recognition request failed');
+      }
+
+      const result = await recognitionResponse.json();
+      setResult(result);
+      console.log("Recognition result:", result);
+    } catch (error) {
+      console.error("Error during recognition:", error);
+      // Handle error, e.g., display error message to user
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
@@ -84,14 +106,14 @@ export default function AnimalAnalyzer() {
                   <Upload className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Choose an image
                 </label>
-                {image && (
+                {inputImage && (
                   <p className="mt-4 text-sm">Image selected. Click &#39;Analyze&#39; to process.</p>
                 )}
               </div>
               <div className="flex justify-center">
                 <Button
-                  onClick={handleSubmit}
-                  disabled={!image || isProcessing}
+                  onClick={handleRecognize}
+                  disabled={!inputImage || isProcessing}
                   size="lg"
                   className={`px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''} ${
                     isDarkMode ? 'bg-[#c19c70] hover:bg-blue-700' : 'bg-[#c19c70] hover:bg-blue-600'
@@ -110,7 +132,7 @@ export default function AnimalAnalyzer() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-16">
-              {image && (
+              {inputImage && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -118,7 +140,15 @@ export default function AnimalAnalyzer() {
                   className="flex flex-col space-y-4"
                 >
                   <h2 className="text-xl sm:text-2xl font-semibold">Uploaded Image</h2>
-                  <img src={image} alt="Uploaded animal" className="w-full h-48 sm:h-64 object-cover rounded-lg shadow-lg" />
+                  <div className="relative w-full h-48 sm:h-64">
+                    <Image 
+                      src={inputImage} 
+                      alt="Uploaded animal" 
+                      layout="fill"
+                      objectFit="cover"
+                      className="rounded-lg shadow-lg"
+                    />
+                  </div>
                 </motion.div>
               )}
               {result && (
@@ -138,7 +168,7 @@ export default function AnimalAnalyzer() {
                       </div>
                       <div>
                         <h3 className="text-lg sm:text-xl font-medium">Animal</h3>
-                        <p className="text-base sm:text-lg font-semibold">{result.name}</p>
+                        <p className="text-base sm:text-lg font-semibold">{result.animal}</p>
                       </div>
                     </div>
                     <div className={`p-3 sm:p-4 rounded-lg ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}>
@@ -166,5 +196,5 @@ export default function AnimalAnalyzer() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
