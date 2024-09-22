@@ -2,7 +2,7 @@ mammals = [
     "human", "dog", "cat", "horse", "cow", "pig", "sheep", "goat", "rabbit", "deer", "bear", "wolf", "fox", 
     "squirrel", "mouse", "rat", "hamster", "guinea pig", "elephant", "giraffe", "lion", "tiger", "leopard", 
     "zebra", "monkey", "gorilla", "kangaroo", "koala", "raccoon", "otter", "bison", "hedgehog", "lemur",
-    "bat", "skunk", "cheetah", "hyena", "walrus", "porcupine", "chimpanzee", "buffalo", "weasel"
+    "bat", "skunk", "cheetah", "hyena", "walrus", "porcupine", "chimpanzee", "buffalo", "weasel","rhino"
 ]
 birds = [
     "chicken", "duck", "sparrow", "eagle", "hawk", "owl", "penguin", "parrot", "pigeon", "seagull", 

@@ -116,7 +116,7 @@ export default function AnimalAnalyzer() {
                   disabled={!inputImage || isProcessing}
                   size="lg"
                   className={`px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''} ${
-                    isDarkMode ? 'bg-[#c19c70] hover:bg-blue-700' : 'bg-[#c19c70] hover:bg-blue-600'
+                    isDarkMode ? 'bg-[#c19c70] hover:bg-[rgb(200,114,13)]' : 'bg-[#c19c70] hover:bg-[rgb(200,114,13)]'
                   } text-white transition-colors duration-300`}
                 >
                   {isProcessing ? (
