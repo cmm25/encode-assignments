@@ -12,7 +12,6 @@ interface Result {
   animal: string;
   confidence: number;
   description: string;
-  wikipediaUrl: string;
   isDangerous: boolean;
 }
 
