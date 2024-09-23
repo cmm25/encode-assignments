@@ -15,7 +15,7 @@ reptiles_and_amphibians = [
 ]
 aquatic_animals = [
     "fish", "whale", "dolphin", "shark", "octopus", "crab", "lobster", "jellyfish", "starfish", "seahorse", 
-    "stingray", "piranha", "eel", "shrimp", "clam", "oyster", "manatee", "swordfish", "tuna", "seal", 
+    "stingray", "piranha", "eel", "shrimp", "clam", "oyster", "manatee", "swordfish", "tuna", "seal", "shark",
     "sea lion", "orca", "marlin", "sea turtle"
 ]
 insects_and_arachnids = [
