@@ -50,10 +50,8 @@ def obtain_animal_info(animal_name: str, max_sentences: int = 2):
         summary = page.summary
         # Limit the summary
         limited_summary = ' '.join(summary.split('. ')[:max_sentences]) + '.'
-        url = page.url
         return {
-            "summary": limited_summary,
-            "url": url
+            "summary": limited_summary
         }
     except DisambiguationError as e:
         logger.warning(f"Disambiguation error for '{animal_name}': {e.options}")
@@ -62,29 +60,24 @@ def obtain_animal_info(animal_name: str, max_sentences: int = 2):
             page = wikipedia.page(selected_option, auto_suggest=False, redirect=True)
             summary = page.summary
             limited_summary = ' '.join(summary.split('. ')[:max_sentences]) + '.'
-            url = page.url
             logger.info(f"Resolved disambiguation by selecting '{selected_option}'.")
             return {
-                "summary": limited_summary,
-                "url": url
+                "summary": limited_summary
             }
         except Exception as ex:
             logger.error(f"Error resolving disambiguation for '{animal_name}': {ex}")
             return {
-                "summary": "Multiple entries found.",
-                "url": "No URL available"
+                "summary": "Multiple entries found."
             }
     except PageError:
         logger.error(f"Page not found for '{animal_name}'.")
         return {
-            "summary": "No description available.",
-            "url": "No URL available"
+            "summary": "No description available."
         }
     except Exception as e:
         logger.error(f"Unexpected error in obtain_animal_info: {e}")
         return {
-            "summary": "No description available.",
-            "url": "No URL available"
+            "summary": "No description available."
         }
 def identify_animal(image_bytes: bytes):
     try:
