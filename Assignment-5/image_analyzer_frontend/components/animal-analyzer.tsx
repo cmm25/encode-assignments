@@ -47,7 +47,6 @@ export default function AnimalAnalyzer() {
       formData.append('image', blob, 'image.jpg');
 
       const recognitionResponse = await fetch('https://fast-image-xv2j.onrender.com/classify', {
-        
         method: 'POST',
         body: formData,
       });
