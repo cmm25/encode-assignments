@@ -99,7 +99,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = ["http://localhost:3000"], #prone to change when hosted the frontend
+    allow_origins = ["http://localhost:3000", "https://image-analysis-ai.vercel.app/"], #prone to change when hosted the frontend
     allow_credentials = True,
     allow_methods = ["*"],
     allow_headers = ["*"]
