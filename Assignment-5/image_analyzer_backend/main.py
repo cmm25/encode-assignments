@@ -96,10 +96,16 @@ agent = OpenAIAgent.from_tools(
 #make the api endpoints using fast api
 
 app = FastAPI()
+origins = [
+    "http://localhost:3000",
+    "https://image-analysis-ai.vercel.app",
+    "https://image-analyzer-aygytniwb-cmm25s-projects.vercel.app"  
+]
+
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = ["http://localhost:3000", "https://image-analysis-ai.vercel.app","https://image-analyzer-aygytniwb-cmm25s-projects.vercel.app"], 
+    allow_origins=origins, 
     allow_credentials = True,
     allow_methods = ["*"],
     allow_headers = ["*"]
